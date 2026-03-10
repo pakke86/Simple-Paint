@@ -319,6 +319,142 @@
             position: relative;
         }
 
+        /* Modal Info */
+        .info-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .info-modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .info-content {
+            background: linear-gradient(-45deg, #1e293b, #334155, #0f172a, #1e1b4b);
+            background-size: 400% 400%;
+            animation: gradientBG 5s ease infinite;
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 40px rgba(139, 92, 246, 0.4);
+            text-align: center;
+            position: relative;
+            max-width: 90%;
+            color: white;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .info-modal.show .info-content {
+            transform: scale(1);
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .info-emoji {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.4));
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-20px);
+            }
+
+            60% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .demoscene-text {
+            font-size: 2rem;
+            font-weight: 900;
+            font-family: 'Courier New', Courier, monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+            background-size: 200% auto;
+            color: #fff;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 2s linear infinite, wiggle 3s ease-in-out infinite;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+            line-height: 1.2;
+        }
+
+        @keyframes shine {
+            to {
+                background-position: 200% center;
+            }
+        }
+
+        @keyframes wiggle {
+
+            0%,
+            100% {
+                transform: rotate(-2deg);
+            }
+
+            50% {
+                transform: rotate(2deg);
+            }
+        }
+
+        .close-info-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .close-info-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
         .canvas-wrapper {
             position: relative;
             padding: 10px;
@@ -405,6 +541,7 @@
 
             <div
                 style="display: flex; gap: 8px; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--border-color);">
+                <button id="infoBtn" class="icon-btn" title="Information">ℹ️</button>
                 <button id="themeToggle" class="icon-btn" title="Växla tema">☀️</button>
                 <button id="langToggle" class="icon-btn" title="Change language"
                     style="font-size: 1rem; padding: 4px 8px; font-weight: bold; background: var(--tool-bg); border-radius: 8px; border: 1px solid var(--border-color);">
@@ -419,6 +556,14 @@
             <canvas id="paintCanvas" width="900" height="650"></canvas>
         </div>
     </main>
+
+    <div id="infoModal" class="info-modal">
+        <div class="info-content">
+            <div class="info-emoji">🎨</div>
+            <div class="demoscene-text">Vibekodad av Patrik Holmström</div>
+            <button id="closeInfoBtn" class="close-info-btn" data-i18n="close">Stäng</button>
+        </div>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -443,6 +588,9 @@
             const themeToggleBtn = document.getElementById('themeToggle');
             const langToggleBtn = document.getElementById('langToggle');
             const langText = document.getElementById('langText');
+            const infoBtn = document.getElementById('infoBtn');
+            const infoModal = document.getElementById('infoModal');
+            const closeInfoBtn = document.getElementById('closeInfoBtn');
 
             // Global State
             let isDrawing = false;
@@ -455,6 +603,7 @@
             let currentColor = colorPicker.value;
             let undoStack = [];
             const MAX_UNDO = 20;
+            let hasDrawn = false;
 
             function saveState() {
                 undoStack.push(canvas.toDataURL());
@@ -474,6 +623,14 @@
                 };
             }
 
+            // Warn before closing
+            window.addEventListener('beforeunload', (e) => {
+                if (hasDrawn) {
+                    e.preventDefault();
+                    e.returnValue = ''; // Required for some browsers to show prompt
+                }
+            });
+
             // Setup initial canvas state (white background)
             function initCanvas() {
                 ctx.fillStyle = '#ffffff';
@@ -490,6 +647,7 @@
                 [lastX, lastY] = getCoordinates(e);
 
                 saveState(); // Spara canvas-historik innan ändring
+                hasDrawn = true; // Mark as dirty when any drawing starts
 
                 if (isFilling) {
                     floodFill(Math.floor(lastX), Math.floor(lastY));
@@ -696,7 +854,8 @@
                     clear: "Rensa allt",
                     save: "Spara bild",
                     copy: "Kopiera bild",
-                    confirmClear: "Är du säker på att du vill rensa hela bilden?"
+                    confirmClear: "Är du säker på att du vill rensa hela bilden?",
+                    close: "Stäng"
                 },
                 en: {
                     appTitle: "Simple Paint",
@@ -710,7 +869,8 @@
                     clear: "Clear All",
                     save: "Save Image",
                     copy: "Copy Image",
-                    confirmClear: "Are you sure you want to clear the entire canvas?"
+                    confirmClear: "Are you sure you want to clear the entire canvas?",
+                    close: "Close"
                 }
             };
             let currentLang = 'sv';
@@ -951,6 +1111,23 @@
 
                 ctx.putImageData(imgData, 0, 0);
             }
+
+            // Info Modal Logic
+            infoBtn.addEventListener('click', () => {
+                infoBtn.style.transform = 'scale(0.85)';
+                setTimeout(() => infoBtn.style.transform = 'scale(1)', 150);
+                infoModal.classList.add('show');
+            });
+
+            closeInfoBtn.addEventListener('click', () => {
+                infoModal.classList.remove('show');
+            });
+
+            infoModal.addEventListener('click', (e) => {
+                if (e.target === infoModal) {
+                    infoModal.classList.remove('show');
+                }
+            });
         });
     </script>
 </body>
