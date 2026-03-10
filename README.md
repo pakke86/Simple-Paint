@@ -1,1 +1,1 @@
-[Simple Paint](https://github.com/pakke86/Simple-Paint/)
+[Simple Paint](https://github.com/pakke86/Simple-Paint/index.html)
